@@ -6,6 +6,7 @@
 import { image } from '@kit.ImageKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { CompressFormat, CompressResult, ImageSize } from './LubanTypes';
+import { LubanUtils } from './LubanUtils';
 
 /**
  * 压缩引擎类
@@ -26,21 +27,28 @@ export class LubanEngine {
     focusAlpha: boolean = false
   ): Promise<CompressResult> {
     try {
-      // 1. 读取原图信息
-      const originalSize = fileIo.statSync(sourcePath).size;
-      const sourceFile = fileIo.openSync(sourcePath, fileIo.OpenMode.READ_ONLY);
+      // 0. 获取原始文件大小（支持 URI 和普通路径）
+      const originalSize = await LubanUtils.getFileSizeInBytes(sourcePath);
+      console.log(`📏 原始文件大小: ${originalSize} 字节`);
+      
+      // 1. 预处理图片文件（处理权限限制的 URI）
+      const processedSourcePath = await LubanUtils.preprocessImageFile(sourcePath);
+      console.log(`🔧 预处理图片: ${sourcePath} -> ${processedSourcePath}`);
+      
+      // 2. 读取原图信息（processedSourcePath 已经是可访问的普通路径）
+      const sourceFile = fileIo.openSync(processedSourcePath, fileIo.OpenMode.READ_ONLY);
 
-      // 2. 创建图片源
+      // 3. 创建图片源
       const imageSource = image.createImageSource(sourceFile.fd);
       const imageInfo = await imageSource.getImageInfo();
 
-      // 3. 计算压缩后的尺寸
+      // 4. 计算压缩后的尺寸
       const compressSize = LubanEngine.computeSize(imageInfo.size.width, imageInfo.size.height);
 
-      // 4. 判断是否需要压缩
+      // 5. 判断是否需要压缩
       if (!LubanEngine.needCompress(originalSize, compressSize.width, compressSize.height)) {
         // 不需要压缩，直接复制文件
-        fileIo.copyFileSync(sourcePath, targetPath);
+        fileIo.copyFileSync(processedSourcePath, targetPath);
 
         const result: CompressResult = {
           success: true,
@@ -51,7 +59,7 @@ export class LubanEngine {
         return result;
       }
 
-      // 5. 创建解码选项
+      // 6. 创建解码选项
       const decodingOptions: image.DecodingOptions = {
         desiredSize: {
           width: compressSize.width,
@@ -68,14 +76,14 @@ export class LubanEngine {
         desiredPixelFormat: image.PixelMapFormat.RGBA_8888
       };
 
-      // 6. 解码图片
+      // 7. 解码图片
       const pixelMap = await imageSource.createPixelMap(decodingOptions);
 
-      // 7. 创建图片打包器
+      // 8. 创建图片打包器
       const imagePackerApi = image.createImagePacker();
 
-      // 8. 设置打包选项
-      const format = LubanEngine.getCompressFormat(sourcePath, focusAlpha);
+      // 9. 设置打包选项
+      const format = LubanEngine.getCompressFormat(processedSourcePath, focusAlpha);
       const quality = LubanEngine.computeQuality(originalSize);
 
       const packOpts: image.PackingOption = {
@@ -83,16 +91,16 @@ export class LubanEngine {
         quality: quality
       };
 
-      // 9. 压缩并打包
+      // 10. 压缩并打包
       const compressedData = await imagePackerApi.packing(pixelMap, packOpts);
 
-      // 10. 写入目标文件
+      // 11. 写入目标文件
       const targetFile = fileIo.openSync(targetPath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY);
       const writeLen = fileIo.writeSync(targetFile.fd, compressedData);
       fileIo.closeSync(targetFile.fd);
       fileIo.closeSync(sourceFile.fd);
 
-      // 11. 释放资源
+      // 12. 释放资源
       pixelMap.release();
       imagePackerApi.release();
 

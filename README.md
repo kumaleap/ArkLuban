@@ -125,6 +125,30 @@ if (result.success) {
 }
 ```
 
+#### 📱 鸿蒙 URI 处理
+
+ArkLuban 完美支持鸿蒙系统的 `file://` URI 格式：
+
+```typescript
+// 从相册选择图片后获得的 URI
+const photoUri = 'file://media/Photo/2/IMG_1750751898_001/IMG_001.jpg';
+
+// 直接使用 URI 进行压缩，库会自动处理 URI 转换
+await Luban.with(photoUri)
+  .onStart(() => console.log('🚀 开始压缩 URI 图片'))
+  .onSuccess((filePath: string) => {
+    console.log('✅ URI 图片压缩成功:', filePath);
+  })
+  .onError((error: Error) => {
+    console.error('❌ URI 处理失败:', error.message);
+  })
+  .launch();
+
+// 测试 URI 处理功能
+const testResult = LubanUtils.testUriHandling(photoUri);
+console.log('🧪 URI 测试:', testResult);
+```
+
 ## 🔧 高级配置
 
 ### 智能过滤系统
@@ -283,6 +307,9 @@ await Luban.with(imagePaths)
 | `formatFileSize(bytes)` | 格式化文件大小显示 | `number` | `string` |
 | `fileExists(path)` | 检查文件是否存在 | `string` | `boolean` |
 | `calculateCompressionRatio(original, compressed)` | 计算压缩比 | `number, number` | `number` (%) |
+| `resolveFilePath(uriOrPath)` | **URI路径解析** | `string` | `string` |
+| `isUri(path)` | **检查是否为URI** | `string` | `boolean` |
+| `testUriHandling(uriOrPath)` | **测试URI处理** | `string` | `string` |
 
 #### 预设过滤器 (FILTERS)
 

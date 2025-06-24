@@ -5,6 +5,7 @@
 
 import { fileIo } from '@kit.CoreFileKit';
 import { LubanEngine } from './LubanEngine';
+import { LubanUtils } from './LubanUtils';
 import {
   CompressionPredicate,
   CompressConfig,
@@ -218,17 +219,21 @@ export class LubanBuilder {
    */
   private async compressSingleFile(sourcePath: string, targetDir: string): Promise<CompressResult> {
     try {
+      // 预处理图片文件（处理 URI 权限问题）
+      const processedSourcePath = await LubanUtils.preprocessImageFile(sourcePath);
+      console.log(`🔧 压缩单文件 - 预处理: ${sourcePath} -> ${processedSourcePath}`);
+      
       // 检查文件是否存在
-      if (!fileIo.accessSync(sourcePath)) {
-        throw new Error(`文件不存在: ${sourcePath}`);
+      if (!fileIo.accessSync(processedSourcePath)) {
+        throw new Error(`文件不存在: ${processedSourcePath}`);
       }
       // 检查文件大小是否超过阈值
-      const fileSize = fileIo.statSync(sourcePath).size;
+      const fileSize = fileIo.statSync(processedSourcePath).size;
       if (fileSize < (this.config.ignoreBy || 100) * 1024) {
         // 文件太小，不需要压缩，直接复制
         const fileName = this.generateFileName(sourcePath);
         const targetPath = `${targetDir}/${fileName}`;
-        fileIo.copyFileSync(sourcePath, targetPath);
+        fileIo.copyFileSync(processedSourcePath, targetPath);
 
         const result: CompressResult = {
           success: true,
@@ -243,9 +248,9 @@ export class LubanBuilder {
       const fileName = this.generateFileName(sourcePath);
       const targetPath = `${targetDir}/${fileName}`;
 
-      // 调用压缩引擎
+      // 调用压缩引擎（传入预处理后的路径）
       return await LubanEngine.compressSingle(
-        sourcePath,
+        processedSourcePath,
         targetPath,
         this.config.focusAlpha || false
       );
@@ -297,8 +302,8 @@ export class LubanBuilder {
       return this.config.targetDir;
     }
 
-    // 使用应用缓存目录
-    return getContext().cacheDir + '/luban';
+    // 使用默认输出目录（filesDir/luban/）
+    return LubanUtils.getDefaultOutputDir();
   }
 
   /**
