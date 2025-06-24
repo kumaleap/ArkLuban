@@ -1,0 +1,12 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "Luban 图片压缩库演示应用",
+  "main": "",
+  "author": "ArkLuban Team",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "library": "file:../library"
+  }
+}
+

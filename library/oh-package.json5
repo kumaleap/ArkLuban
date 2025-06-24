@@ -1,0 +1,16 @@
+{
+  "name": "library",
+  "version": "1.0.0",
+  "description": "Luban 图片压缩库的鸿蒙版本，仿照微信朋友圈压缩策略",
+  "main": "Index.ets",
+  "author": "ArkLuban Team",
+  "license": "Apache-2.0",
+  "keywords": [
+    "image",
+    "compression",
+    "luban",
+    "harmonyos",
+    "arkts"
+  ],
+  "dependencies": {}
+}

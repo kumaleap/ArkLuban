@@ -1,0 +1,28 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Luban 图片压缩演示应用"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "Luban 图片压缩库演示"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "Luban Demo"
+    },
+    {
+      "name": "permission_read_media",
+      "value": "需要读取媒体文件权限以选择图片进行压缩"
+    },
+    {
+      "name": "permission_write_media",
+      "value": "需要写入媒体文件权限以保存压缩后的图片"
+    },
+    {
+      "name": "permission_camera",
+      "value": "需要相机权限以拍摄照片进行压缩"
+    }
+  ]
+}
