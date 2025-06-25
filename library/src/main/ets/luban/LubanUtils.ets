@@ -4,7 +4,6 @@
  */
 
 import { fileIo } from '@kit.CoreFileKit';
-import { fileUri } from '@kit.CoreFileKit';
 import fs from '@ohos.file.fs';
 import { FilterCollection, CompressionPredicate } from './LubanTypes';
 
