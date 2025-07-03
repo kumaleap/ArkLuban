@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Luban 图片压缩库的鸿蒙版本，仿照微信朋友圈压缩策略",
   "main": "Index.ets",
-  "author": "大熊",
+  "author": "androidzk@163.com",
   "license": "Apache-2.0",
   "keywords": [
     "image",
@@ -12,5 +12,12 @@
     "harmonyos",
     "arkts"
   ],
+  "bugs": {
+    "url": "https://github.com/kumaleap/ArkLuban/issues"
+  },
+  "homepage": "https://github.com/kumaleap/ArkLuban#readme",
+  "engines": {
+    "harmonyos": ">=4.0.0"
+  },
   "dependencies": {}
 }
