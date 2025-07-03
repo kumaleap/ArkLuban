@@ -6,7 +6,7 @@
   "author": "ArkLuban Team",
   "license": "Apache-2.0",
   "dependencies": {
-    "library": "file:../library"
+    "arkluban": "file:../library"
   }
 }
 

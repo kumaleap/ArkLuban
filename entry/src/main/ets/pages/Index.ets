@@ -1,6 +1,6 @@
 import { fileIo } from '@kit.CoreFileKit';
 import { image } from '@kit.ImageKit';
-import { Luban, LubanUtils } from 'library';
+import { Luban, LubanUtils } from 'arkluban';
 import { PhotoHelper } from '../utils/PhotoHelper';
 
 interface CompressInfo {

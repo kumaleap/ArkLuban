@@ -14,16 +14,13 @@
 - 🔄 **异步处理**: 支持异步压缩，不阻塞主线程
 - 📊 **详细回调**: 提供完整的压缩过程回调
 
-## 安装
+## 🚀 快速开始
 
-在项目的 `oh-package.json5` 中添加依赖：
+### 安装
 
-```json5
-{
-  "dependencies": {
-    "library": "file:../library"
-  }
-}
+```bash
+# 在你的模块目录下
+ohpm install arkluban
 ```
 
 然后运行：
@@ -37,7 +34,7 @@ ohpm install
 ### 基本使用
 
 ```typescript
-import { Luban } from 'library';
+import { Luban } from 'arkluban';
 
 // 压缩单张图片
 Luban.with('/path/to/image.jpg')
@@ -55,7 +52,7 @@ Luban.with('/path/to/image.jpg')
 ### 批量压缩
 
 ```typescript
-import { Luban } from 'library';
+import { Luban } from 'arkluban';
 
 // 批量压缩多张图片
 Luban.with(['/path/to/image1.jpg', '/path/to/image2.png'])
@@ -77,7 +74,7 @@ Luban.with(['/path/to/image1.jpg', '/path/to/image2.png'])
 ### 获取压缩结果
 
 ```typescript
-import { Luban } from 'library';
+import { Luban } from 'arkluban';
 
 // 同步获取压缩结果
 const compressedFiles = await Luban.with('/path/to/image.jpg')

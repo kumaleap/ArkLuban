@@ -23,7 +23,7 @@ Luban 是库的主入口类，提供了创建压缩构建器的静态方法。
 
 **示例:**
 ```typescript
-import { Luban } from 'library';
+import { Luban } from 'arkluban';
 
 // 压缩单张图片
 const builder = Luban.with('/path/to/image.jpg');
@@ -49,7 +49,7 @@ LubanBuilder 是压缩配置和执行的构建器类，提供了链式调用的 
 
 **示例:**
 ```typescript
-import { Luban, LubanUtils } from 'library';
+import { Luban, LubanUtils } from 'arkluban';
 
 Luban.with('/path/to/image.jpg')
   .filter(LubanUtils.ImagesOnlyFilter) // 只压缩图片文件
@@ -235,7 +235,7 @@ LubanUtils 提供了各种过滤器工具，用于过滤需要压缩的文件。
 
 **示例:**
 ```typescript
-import { Luban, LubanUtils } from 'library';
+import { Luban, LubanUtils } from 'arkluban';
 
 Luban.with('/path/to/file')
   .filter(LubanUtils.ImagesOnlyFilter)
@@ -248,7 +248,7 @@ Luban.with('/path/to/file')
 
 **示例:**
 ```typescript
-import { Luban, LubanUtils } from 'library';
+import { Luban, LubanUtils } from 'arkluban';
 
 Luban.with('/path/to/image.gif')
   .filter(LubanUtils.ExcludeGifFilter)
@@ -264,7 +264,7 @@ Luban.with('/path/to/image.gif')
 
 **示例:**
 ```typescript
-import { Luban, LubanUtils } from 'library';
+import { Luban, LubanUtils } from 'arkluban';
 
 Luban.with('/path/to/image.jpg')
   .filter(LubanUtils.MinSizeFilter(200)) // 只压缩大于200KB的文件
@@ -280,7 +280,7 @@ Luban.with('/path/to/image.jpg')
 
 **示例:**
 ```typescript
-import { Luban, LubanUtils } from 'library';
+import { Luban, LubanUtils } from 'arkluban';
 
 Luban.with('/path/to/image.jpg')
   .filter(LubanUtils.DefaultFilter(150)) // 使用默认过滤器，最小150KB
@@ -306,7 +306,7 @@ LubanEngine 是核心压缩引擎，提供了底层的压缩功能。
 
 **示例:**
 ```typescript
-import { LubanEngine } from 'library';
+import { LubanEngine } from 'arkluban';
 
 const result = await LubanEngine.compressImage(
   '/path/to/source.jpg',
@@ -443,7 +443,7 @@ type RenameCallback = (filePath: string) => string;
 ### 基本压缩
 
 ```typescript
-import { Luban } from 'library';
+import { Luban } from 'arkluban';
 
 // 压缩单张图片
 Luban.with('/path/to/image.jpg')
@@ -461,7 +461,7 @@ Luban.with('/path/to/image.jpg')
 ### 批量压缩
 
 ```typescript
-import { Luban, LubanUtils } from 'library';
+import { Luban, LubanUtils } from 'arkluban';
 
 // 批量压缩多张图片
 Luban.with(['/path/to/image1.jpg', '/path/to/image2.png'])
@@ -483,7 +483,7 @@ Luban.with(['/path/to/image1.jpg', '/path/to/image2.png'])
 ### 获取压缩结果
 
 ```typescript
-import { Luban } from 'library';
+import { Luban } from 'arkluban';
 
 // 同步获取压缩结果
 const compressedFiles = await Luban.with('/path/to/image.jpg')
@@ -496,7 +496,7 @@ console.log('压缩后的文件:', compressedFiles);
 ### 自定义过滤器
 
 ```typescript
-import { Luban } from 'library';
+import { Luban } from 'arkluban';
 
 // 自定义过滤器
 const customFilter = {
@@ -513,7 +513,7 @@ Luban.with('/path/to/photo.jpg')
 ### 文件重命名
 
 ```typescript
-import { Luban } from 'library';
+import { Luban } from 'arkluban';
 
 Luban.with('/path/to/image.jpg')
   .onRename((filePath) => {
@@ -528,7 +528,7 @@ Luban.with('/path/to/image.jpg')
 Luban 库提供了完善的错误处理机制：
 
 ```typescript
-import { Luban } from 'library';
+import { Luban } from 'arkluban';
 
 Luban.with('/path/to/image.jpg')
   .onError((error) => {
