@@ -1,6 +1,6 @@
 {
   "name": "arkluban",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Luban 图片压缩库的鸿蒙版本，仿照微信朋友圈压缩策略",
   "main": "Index.ets",
   "author": "androidzk@163.com",
@@ -10,7 +10,11 @@
     "compression",
     "luban",
     "harmonyos",
-    "arkts"
+    "arkts",
+    "图片",
+    "压缩",
+    "压缩图片",
+    "图片压缩"
   ],
   "bugs": {
     "url": "https://github.com/kumaleap/ArkLuban/issues"
