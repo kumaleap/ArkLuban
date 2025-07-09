@@ -5,10 +5,6 @@ export { LubanEngine } from './src/main/ets/luban/LubanEngine'
 
 export {
   LubanUtils,
-  ImagesOnlyFilter,
-  ExcludeGifFilter,
-  MinSizeFilter,
-  DefaultFilter
 } from './src/main/ets/luban/LubanUtils'
 
 export {

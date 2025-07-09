@@ -8,57 +8,6 @@ import fs from '@ohos.file.fs';
 import { FilterCollection, CompressionPredicate } from './LubanTypes';
 
 /**
- * 只压缩图片文件的过滤器
- */
-export class ImagesOnlyFilter implements CompressionPredicate {
-  apply(path: string): boolean {
-    return LubanUtils.isImage(path);
-  }
-}
-
-/**
- * 排除 GIF 文件的过滤器
- */
-export class ExcludeGifFilter implements CompressionPredicate {
-  apply(path: string): boolean {
-    const extension = LubanUtils.getFileExtension(path);
-    return LubanUtils.isImage(path) && extension !== 'gif';
-  }
-}
-
-/**
- * 只压缩大于指定大小文件的过滤器
- */
-export class MinSizeFilter implements CompressionPredicate {
-  private minSizeKB: number;
-
-  constructor(minSizeKB: number) {
-    this.minSizeKB = minSizeKB;
-  }
-
-  apply(path: string): boolean {
-    const sizeKB = LubanUtils.getFileSizeInKBSync(path);
-    return sizeKB > this.minSizeKB;
-  }
-}
-
-/**
- * 默认组合过滤器：排除 GIF 且大于指定大小
- */
-export class DefaultFilter implements CompressionPredicate {
-  private minSizeKB: number;
-
-  constructor(minSizeKB: number) {
-    this.minSizeKB = minSizeKB;
-  }
-
-  apply(path: string): boolean {
-    return new ExcludeGifFilter().apply(path) &&
-    new MinSizeFilter(this.minSizeKB).apply(path);
-  }
-}
-
-/**
  * Luban 工具类
  */
 export class LubanUtils {
@@ -337,19 +286,27 @@ export class LubanUtils {
     /**
      * 只压缩图片文件
      */
-    IMAGES_ONLY: new ImagesOnlyFilter(),
+    IMAGES_ONLY: (path: string): boolean => {
+      return LubanUtils.isImage(path);
+    },
 
     /**
      * 排除 GIF 文件
      */
-    EXCLUDE_GIF: new ExcludeGifFilter(),
+    EXCLUDE_GIF: (path: string): boolean => {
+      const extension = LubanUtils.getFileExtension(path);
+      return LubanUtils.isImage(path) && extension !== 'gif';
+    },
 
     /**
      * 只压缩大于指定大小的文件
      * @param minSizeKB 最小文件大小（KB）
      */
     MIN_SIZE: (minSizeKB: number): CompressionPredicate => {
-      return new MinSizeFilter(minSizeKB);
+      return (path: string): boolean => {
+        const sizeKB = LubanUtils.getFileSizeInKBSync(path);
+        return sizeKB > minSizeKB;
+      };
     },
 
     /**
@@ -357,7 +314,10 @@ export class LubanUtils {
      * @param minSizeKB 最小文件大小（KB）
      */
     DEFAULT: (minSizeKB: number = 100): CompressionPredicate => {
-      return new DefaultFilter(minSizeKB);
+      return (path: string): boolean => {
+        return LubanUtils.FILTERS.EXCLUDE_GIF(path) &&
+          LubanUtils.FILTERS.MIN_SIZE(minSizeKB)(path);
+      };
     }
   };
 

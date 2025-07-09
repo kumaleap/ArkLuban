@@ -172,18 +172,22 @@ export class LubanBuilder {
         return await this.compressSingleFile(path, targetDir);
       });
 
-      const results = await Promise.all(compressTasks);
+      const results = await Promise.allSettled(compressTasks);
 
       // 处理结果
       for (const result of results) {
-        if (result.success && result.filePath) {
-          this.config.onSuccess?.(result.filePath);
-        } else if (result.error) {
-          this.config.onError?.(result.error);
+        if (result.status === "fulfilled" && result.value.success && result.value.filePath) {
+          this.config.onSuccess?.(result.value.filePath);
+        } else if (result.status === "rejected") {
+          this.config.onError?.(result.reason);
+        } else if (result.status === "fulfilled" && result.value?.error) {
+          this.config.onError?.(result.value.error);
         }
       }
 
     } catch (error) {
+      // 只有在整体流程出现问题时才调用 onError
+      console.error('压缩流程出现严重错误:', error);
       this.config.onError?.(error as Error);
     }
   }
@@ -273,7 +277,7 @@ export class LubanBuilder {
       return this.config.paths;
     }
 
-    return this.config.paths.filter(path => this.config.filter!.apply(path));
+    return this.config.paths.filter(path => this.config.filter!(path));
   }
 
   /**

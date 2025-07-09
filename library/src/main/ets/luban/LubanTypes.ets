@@ -20,6 +20,11 @@ export interface CompressOptions {
 }
 
 /**
+ * 压缩条件判断函数类型
+ */
+export type CompressionPredicate = (path: string) => boolean;
+
+/**
  * 过滤器集合接口
  */
 export interface FilterCollection {
@@ -53,18 +58,6 @@ export interface CompressCallbacks {
   onStart?: () => void;
   onSuccess?: (filePath: string) => void;
   onError?: (error: Error) => void;
-}
-
-/**
- * 压缩条件判断接口
- */
-export interface CompressionPredicate {
-  /**
-   * 判断是否需要压缩
-   * @param path 文件路径
-   * @returns 是否需要压缩
-   */
-  apply(path: string): boolean;
 }
 
 /**
