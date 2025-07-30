@@ -36,14 +36,14 @@
 ## 安装
 
 ```bash
-ohpm install arkluban
+ohpm install @ark/luban
 ```
 ## 快速开始
 
 ### 基本使用
 
 ```typescript
-import { Luban } from 'library';
+import { Luban } from '@ark/luban';
 
 // 压缩单张图片
 Luban.with('/path/to/image.jpg')
@@ -71,7 +71,7 @@ Luban.with(['/path/to/image1.jpg', '/path/to/image2.png'])
 ### 同步获取结果
 
 ```typescript
-import { Luban } from 'library';
+import { Luban } from '@ark/luban';
 
 async function compressImages() {
   try {
@@ -169,7 +169,7 @@ Luban.with(paths)
 #### 预设过滤器
 
 ```typescript
-import { LubanUtils } from 'library';
+import { LubanUtils } from '@ark/luban';
 
 // 只压缩图片
 .filter(LubanUtils.FILTERS.IMAGES_ONLY)
@@ -187,7 +187,7 @@ import { LubanUtils } from 'library';
 ### 实用工具
 
 ```typescript
-import { LubanUtils } from 'library';
+import { LubanUtils } from '@ark/luban';
 
 // 检查是否为图片
 LubanUtils.isImage(path);
