@@ -1,20 +1,19 @@
 {
-  "name": "arkluban",
-  "version": "1.0.1",
+  "name": "@ark/luban",
+  "version": "1.0.2",
   "description": "Luban 图片压缩库的鸿蒙版本，仿照微信朋友圈压缩策略",
   "main": "Index.ets",
-  "author": "androidzk@163.com",
+  "author": "ark",
   "license": "Apache-2.0",
+  "repository": "https://github.com/kumaleap/ArkLuban.git",
   "keywords": [
-    "image",
-    "compression",
-    "luban",
-    "harmonyos",
-    "arkts",
     "图片",
     "压缩",
     "压缩图片",
-    "图片压缩"
+    "图片压缩",
+    "image",
+    "compression",
+    "luban"
   ],
   "bugs": {
     "url": "https://github.com/kumaleap/ArkLuban/issues"
@@ -23,5 +22,7 @@
   "engines": {
     "harmonyos": ">=4.0.0"
   },
+  "compileSdkVersion": 12,
+  "compatibleSdkVersion": 12,
   "dependencies": {}
 }

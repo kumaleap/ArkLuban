@@ -5,6 +5,7 @@
 
 import { fileIo } from '@kit.CoreFileKit';
 import fs from '@ohos.file.fs';
+import { LogUtil } from './LogUtil';
 import { FilterCollection, CompressionPredicate } from './LubanTypes';
 
 /**
@@ -26,7 +27,7 @@ export class LubanUtils {
    * @returns 转换后的文件路径
    */
   static resolveFilePath(uriOrPath: string): string {
-    console.warn('⚠️ resolveFilePath 方法已废弃，建议使用 preprocessImageFile 方法');
+    LogUtil.warn('⚠️ resolveFilePath 方法已废弃，建议使用 preprocessImageFile 方法');
     
     if (!uriOrPath) {
       throw new Error('路径或URI不能为空');
@@ -108,7 +109,7 @@ export class LubanUtils {
     try {
       if (LubanUtils.isUri(filePath)) {
         // 对于 URI，通过 fs.open 获取文件信息
-        console.log(`📏 获取 URI 文件大小: ${filePath}`);
+        LogUtil.debug(`📏 获取 URI 文件大小: ${filePath}`);
         const file = await fs.open(filePath, fs.OpenMode.READ_ONLY);
         try {
           const stat = await fs.stat(file.fd);
@@ -122,7 +123,7 @@ export class LubanUtils {
         return size;
       }
     } catch (error) {
-      console.error('获取文件大小失败:', error);
+      LogUtil.error('获取文件大小失败:', error);
       return 0;
     }
   }
@@ -147,14 +148,14 @@ export class LubanUtils {
     try {
       // 检查是否为 URI
       if (LubanUtils.isUri(filePath)) {
-        console.error('❌ getFileSizeInKBSync 不支持 URI，请使用异步版本 getFileSizeInKB');
+        LogUtil.error('❌ getFileSizeInKBSync 不支持 URI，请使用异步版本 getFileSizeInKB');
         return 0;
       }
 
       const size = fileIo.statSync(filePath).size;
       return Math.round(size / 1024);
     } catch (error) {
-      console.error('获取文件大小失败:', error);
+      LogUtil.error('获取文件大小失败:', error);
       return 0;
     }
   }
@@ -184,7 +185,7 @@ export class LubanUtils {
     try {
       // 检查是否为 URI
       if (LubanUtils.isUri(filePath)) {
-        console.error('❌ fileExists 不支持 URI，请先使用 preprocessImageFile 预处理');
+        LogUtil.error('❌ fileExists 不支持 URI，请先使用 preprocessImageFile 预处理');
         return false;
       }
 
@@ -206,7 +207,7 @@ export class LubanUtils {
       }
       return true;
     } catch (error) {
-      console.error('创建目录失败:', error);
+      LogUtil.error('创建目录失败:', error);
       return false;
     }
   }
@@ -224,7 +225,7 @@ export class LubanUtils {
       }
       return false;
     } catch (error) {
-      console.error('删除文件失败:', error);
+      LogUtil.error('删除文件失败:', error);
       return false;
     }
   }
@@ -245,7 +246,7 @@ export class LubanUtils {
       
       return outputDir;
     } catch (error) {
-      console.error('获取默认输出目录失败:', error);
+      LogUtil.error('获取默认输出目录失败:', error);
       return '/data/storage/el2/base/files/luban';
     }
   }
@@ -353,7 +354,7 @@ export class LubanUtils {
       
       return filePath;
     } catch (error) {
-      console.error('获取临时目录路径失败:', error);
+      LogUtil.error('获取临时目录路径失败:', error);
       throw new Error(`获取临时目录失败: ${error}`);
     }
   }
@@ -390,7 +391,7 @@ export class LubanUtils {
       
       return filePath;
     } catch (error) {
-      console.error('获取缓存目录路径失败:', error);
+      LogUtil.error('获取缓存目录路径失败:', error);
       throw new Error(`获取缓存目录失败: ${error}`);
     }
   }
@@ -418,28 +419,28 @@ export class LubanUtils {
    */
   static async copyToTemp(srcFileUri: string, targetDir: string = "luban"): Promise<string> {
     try {
-      console.log('📋 开始复制文件到临时目录...');
-      console.log(`🔗 源文件URI: ${srcFileUri}`);
+      LogUtil.debug('📋 开始复制文件到临时目录...');
+      LogUtil.debug(`🔗 源文件URI: ${srcFileUri}`);
 
       // 生成目标文件路径
       const fileName = LubanUtils.generateTempFileName(srcFileUri);
       const tempFilePath = LubanUtils.getTempDirPath(targetDir, fileName);
-      console.log(`🎯 目标文件路径: ${tempFilePath}`);
+      LogUtil.debug(`🎯 目标文件路径: ${tempFilePath}`);
 
       // 打开源文件（只读）- 直接使用 URI
-      console.log('🔓 打开源文件（使用URI）...');
+      LogUtil.debug('🔓 打开源文件（使用URI）...');
       const srcFile = await fs.open(srcFileUri, fs.OpenMode.READ_ONLY);
 
       // 创建目标文件（读写+创建）
-      console.log('📝 创建目标文件...');
+      LogUtil.debug('📝 创建目标文件...');
       const mode: number = fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE;
       const destFile = await fs.open(tempFilePath, mode);
 
       try {
         // 复制文件内容
-        console.log('📋 正在复制文件内容...');
+        LogUtil.debug('📋 正在复制文件内容...');
         await fs.copyFile(srcFile.fd, destFile.fd);
-        console.log('✅ 文件复制成功!');
+        LogUtil.debug('✅ 文件复制成功!');
 
         return tempFilePath;
       } finally {
@@ -447,13 +448,13 @@ export class LubanUtils {
         try {
           await fs.close(srcFile.fd);
           await fs.close(destFile.fd);
-          console.log('🔒 文件描述符已关闭');
+          LogUtil.debug('🔒 文件描述符已关闭');
         } catch (closeError) {
-          console.warn('⚠️ 关闭文件描述符时出现警告:', closeError);
+          LogUtil.warn('⚠️ 关闭文件描述符时出现警告:', closeError);
         }
       }
     } catch (error) {
-      console.error('❌ 复制文件到临时目录失败:', error);
+      LogUtil.error('❌ 复制文件到临时目录失败:', error);
       throw new Error(`复制文件到临时目录失败: ${error}`);
     }
   }
@@ -463,7 +464,7 @@ export class LubanUtils {
    * 将受权限限制的文件复制到应用缓存目录
    */
   static async copyToCache(srcFileUri: string, targetDir: string = "luban_temp"): Promise<string> {
-    console.warn('⚠️ copyToCache 方法已废弃，请使用 copyToTemp 方法');
+    LogUtil.warn('⚠️ copyToCache 方法已废弃，请使用 copyToTemp 方法');
     return await LubanUtils.copyToTemp(srcFileUri, targetDir);
   }
 
@@ -489,21 +490,21 @@ export class LubanUtils {
    */
   static async preprocessImageFile(filePath: string): Promise<string> {
     try {
-      console.log(`🔧 预处理图片文件: ${filePath}`);
+      LogUtil.debug(`🔧 预处理图片文件: ${filePath}`);
 
       // 如果不是 URI，直接返回
       if (!LubanUtils.isUri(filePath)) {
-        console.log('📁 普通路径，直接返回');
+        LogUtil.debug('📁 普通路径，直接返回');
         return filePath;
       }
 
       // 对于 URI，直接复制到临时目录
-      console.log('🔗 检测到 URI，复制到临时目录...');
+      LogUtil.debug('🔗 检测到 URI，复制到临时目录...');
       const tempFilePath = await LubanUtils.copyToTemp(filePath);
-      console.log(`✅ 已复制到临时目录: ${tempFilePath}`);
+      LogUtil.debug(`✅ 已复制到临时目录: ${tempFilePath}`);
       return tempFilePath;
     } catch (error) {
-      console.error('❌ 预处理图片文件失败:', error);
+      LogUtil.error('❌ 预处理图片文件失败:', error);
       throw new Error(`预处理图片文件失败: ${error}`);
     }
   }
@@ -520,7 +521,7 @@ export class LubanUtils {
 
       // 清理临时目录（新版本使用的目录）
       const tempDirPath = LubanUtils.getTempDirPath(tempDir);
-      console.log(`🧹 清理临时目录: ${tempDirPath}`);
+      LogUtil.debug(`🧹 清理临时目录: ${tempDirPath}`);
 
       if (fileIo.accessSync(tempDirPath)) {
         const tempFiles = fileIo.listFileSync(tempDirPath);
@@ -530,19 +531,19 @@ export class LubanUtils {
             if (fileIo.statSync(filePath).isFile()) {
               fileIo.unlinkSync(filePath);
               totalCleanedCount++;
-              console.log(`🗑️ 删除临时文件: ${fileName}`);
+              LogUtil.debug(`🗑️ 删除临时文件: ${fileName}`);
             }
           } catch (error) {
-            console.warn(`⚠️ 清理临时文件失败: ${fileName}`, error);
+            LogUtil.warn(`⚠️ 清理临时文件失败: ${fileName}`, error);
           }
         }
       } else {
-        console.log('📁 临时目录不存在，无需清理');
+        LogUtil.debug('📁 临时目录不存在，无需清理');
       }
 
       // 清理缓存目录（兼容旧版本）
       const cacheDirPath = LubanUtils.getCacheDirPath(cacheDir);
-      console.log(`🧹 清理缓存目录: ${cacheDirPath}`);
+      LogUtil.debug(`🧹 清理缓存目录: ${cacheDirPath}`);
 
       if (fileIo.accessSync(cacheDirPath)) {
         const cacheFiles = fileIo.listFileSync(cacheDirPath);
@@ -552,20 +553,20 @@ export class LubanUtils {
             if (fileIo.statSync(filePath).isFile()) {
               fileIo.unlinkSync(filePath);
               totalCleanedCount++;
-              console.log(`🗑️ 删除缓存文件: ${fileName}`);
+              LogUtil.debug(`🗑️ 删除缓存文件: ${fileName}`);
             }
           } catch (error) {
-            console.warn(`⚠️ 清理缓存文件失败: ${fileName}`, error);
+            LogUtil.warn(`⚠️ 清理缓存文件失败: ${fileName}`, error);
           }
         }
       } else {
-        console.log('📁 缓存目录不存在，无需清理');
+        LogUtil.debug('📁 缓存目录不存在，无需清理');
       }
 
-      console.log(`🧹 清理完成，总共删除了 ${totalCleanedCount} 个文件`);
+      LogUtil.debug(`🧹 清理完成，总共删除了 ${totalCleanedCount} 个文件`);
       return totalCleanedCount;
     } catch (error) {
-      console.error('❌ 清理临时缓存失败:', error);
+      LogUtil.error('❌ 清理临时缓存失败:', error);
       return 0;
     }
   }
@@ -577,36 +578,36 @@ export class LubanUtils {
    */
   static testUriHandling(uriOrPath: string): string {
     try {
-      console.log(`🧪 测试URI处理: ${uriOrPath}`);
+      LogUtil.debug(`🧪 测试URI处理: ${uriOrPath}`);
 
       const isUri = LubanUtils.isUri(uriOrPath);
-      console.log(`📋 是否为URI: ${isUri}`);
+      LogUtil.debug(`📋 是否为URI: ${isUri}`);
 
       if (isUri) {
-        console.log(`🔗 检测到 URI，需要使用 preprocessImageFile 进行预处理`);
+        LogUtil.debug(`🔗 检测到 URI，需要使用 preprocessImageFile 进行预处理`);
         
         const isImage = LubanUtils.isImage(uriOrPath);
-        console.log(`🖼️ 是否为图片: ${isImage}`);
+        LogUtil.debug(`🖼️ 是否为图片: ${isImage}`);
         
         return `URI测试完成 - 原始: ${uriOrPath}, 类型: URI, 是否为图片: ${isImage}`;
       } else {
         // 普通路径的处理
         const exists = LubanUtils.fileExists(uriOrPath);
-        console.log(`📂 文件是否存在: ${exists}`);
+        LogUtil.debug(`📂 文件是否存在: ${exists}`);
 
         if (exists) {
           const sizeKB = LubanUtils.getFileSizeInKBSync(uriOrPath);
-          console.log(`📏 文件大小: ${sizeKB} KB`);
+          LogUtil.debug(`📏 文件大小: ${sizeKB} KB`);
 
           const isImage = LubanUtils.isImage(uriOrPath);
-          console.log(`🖼️ 是否为图片: ${isImage}`);
+          LogUtil.debug(`🖼️ 是否为图片: ${isImage}`);
         }
 
         return `路径测试完成 - 原始: ${uriOrPath}, 类型: 普通路径, 存在: ${exists}`;
       }
     } catch (error) {
       const errorMsg = `URI处理测试失败: ${error}`;
-      console.error(errorMsg);
+      LogUtil.error(errorMsg);
       return errorMsg;
     }
   }

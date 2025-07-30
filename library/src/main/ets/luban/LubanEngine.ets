@@ -7,6 +7,7 @@ import { image } from '@kit.ImageKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { CompressFormat, CompressResult, ImageSize } from './LubanTypes';
 import { LubanUtils } from './LubanUtils';
+import { LogUtil } from './LogUtil';
 
 /**
  * 压缩引擎类
@@ -29,11 +30,11 @@ export class LubanEngine {
     try {
       // 0. 获取原始文件大小（支持 URI 和普通路径）
       const originalSize = await LubanUtils.getFileSizeInBytes(sourcePath);
-      console.log(`📏 原始文件大小: ${originalSize} 字节`);
+      LogUtil.debug(`📏 原始文件大小: ${originalSize} 字节`);
       
       // 1. 预处理图片文件（处理权限限制的 URI）
       const processedSourcePath = await LubanUtils.preprocessImageFile(sourcePath);
-      console.log(`🔧 预处理图片: ${sourcePath} -> ${processedSourcePath}`);
+      LogUtil.debug(`🔧 预处理图片: ${sourcePath} -> ${processedSourcePath}`);
       
       // 2. 读取原图信息（processedSourcePath 已经是可访问的普通路径）
       const sourceFile = fileIo.openSync(processedSourcePath, fileIo.OpenMode.READ_ONLY);
@@ -113,7 +114,7 @@ export class LubanEngine {
       return result;
 
     } catch (error) {
-      console.error(LubanEngine.TAG, `压缩失败: ${error.message}`);
+      LogUtil.error(LubanEngine.TAG, `压缩失败: ${error.message}`);
       const result: CompressResult = {
         success: false,
         error: error as Error

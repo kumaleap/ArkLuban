@@ -13,6 +13,7 @@ import {
   CompressOptions,
   RenameCallback
 } from './LubanTypes';
+import { LogUtil } from './LogUtil';
 
 /**
  * Luban 压缩器构建类
@@ -187,7 +188,7 @@ export class LubanBuilder {
 
     } catch (error) {
       // 只有在整体流程出现问题时才调用 onError
-      console.error('压缩流程出现严重错误:', error);
+      LogUtil.error('压缩流程出现严重错误:', error);
       this.config.onError?.(error as Error);
     }
   }
@@ -225,7 +226,7 @@ export class LubanBuilder {
     try {
       // 预处理图片文件（处理 URI 权限问题）
       const processedSourcePath = await LubanUtils.preprocessImageFile(sourcePath);
-      console.log(`🔧 压缩单文件 - 预处理: ${sourcePath} -> ${processedSourcePath}`);
+      LogUtil.debug(`🔧 压缩单文件 - 预处理: ${sourcePath} -> ${processedSourcePath}`);
       
       // 检查文件是否存在
       if (!fileIo.accessSync(processedSourcePath)) {
@@ -320,7 +321,7 @@ export class LubanBuilder {
         fileIo.mkdirSync(dirPath, true);
       }
     } catch (error) {
-      console.error('创建目录失败:', error);
+      LogUtil.error('创建目录失败:', error);
       throw new Error(`无法创建目标目录: ${dirPath}`);
     }
   }
