@@ -5,6 +5,10 @@
 
 基于著名的 [Luban Android 版本](https://github.com/Curzibn/Luban) 实现的鸿蒙 ArkTS 图片压缩库，完美仿照微信朋友圈的图片压缩算法，为鸿蒙生态提供高效的图片压缩解决方案。
 
+<p align="center">
+  <img src="demo.gif" alt="ArkLuban 演示" width="600" style="max-width: 100%;" />
+</p>
+
 ## 目录
 
 - [特性](#特性)
@@ -139,6 +143,7 @@ Luban.with(paths)
   })
   .onSuccess((filePath) => {
     // 单个文件压缩成功
+    //显示时 使用 fileUri 获取uri 直接赋值给Image就可以显示了
   })
   .onError((error) => {
     // 发生错误
