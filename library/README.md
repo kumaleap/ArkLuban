@@ -1,7 +1,7 @@
 # Luban 图片压缩库 - 鸿蒙版本
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0-green.svg)](oh-package.json5)
+[![Version](https://img.shields.io/badge/version-1.0.3-green.svg)](oh-package.json5)
 
 ArkLuban 是参考 [Luban Android 版本](https://github.com/Curzibn/Luban) 和微信朋友圈压缩策略实现的 HarmonyOS ArkTS 图片压缩库。它提供链式 API、批量并发、URI 预处理、EXIF 方向处理、透明通道保留和可调 JPEG 质量，适合在上传、分享、IM、表单图片等场景中降低图片体积。
 

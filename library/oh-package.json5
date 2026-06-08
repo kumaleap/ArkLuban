@@ -1,7 +1,7 @@
 {
   "name": "@ark/luban",
-  "version": "1.0.2",
-  "description": "Luban 图片压缩库的鸿蒙版本，仿照微信朋友圈压缩策略",
+  "version": "1.0.3",
+  "description": "HarmonyOS ArkTS 图片压缩库，参考 Luban 压缩策略，支持批量压缩、URI 预处理、EXIF 方向处理和 JPEG 质量调节",
   "main": "Index.ets",
   "author": "ark",
   "license": "Apache-2.0",
