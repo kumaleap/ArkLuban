@@ -1,10 +1,16 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
+import { LubanUtils } from '@ark/luban';
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
-    this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
+    LubanUtils.setContext(this.context);
+    try {
+      this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
+    } catch (error) {
+      hilog.warn(0x0000, 'testTag', 'Failed to set color mode. Cause: %{public}s', JSON.stringify(error) ?? '');
+    }
     hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onCreate');
   }
 

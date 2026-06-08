@@ -47,7 +47,10 @@ ohpm install @ark/luban
 ### 基本使用
 
 ```typescript
-import { Luban } from '@ark/luban';
+import { Luban, LubanUtils } from '@ark/luban';
+
+// 在 UIAbility.onCreate 中初始化一次；使用默认输出目录、URI 临时文件和缓存清理时必须设置
+LubanUtils.setContext(this.context);
 
 // 压缩单张图片
 Luban.with('/path/to/image.jpg')
@@ -59,13 +62,15 @@ Luban.with('/path/to/image.jpg')
 ### 批量压缩
 
 ```typescript
-import { Luban, LubanUtils } from 'library';
+import { Luban, LubanUtils } from '@ark/luban';
 
 // 批量压缩多张图片
 Luban.with(['/path/to/image1.jpg', '/path/to/image2.png'])
   .filter((path) => !path.endsWith('.gif')) // 使用函数过滤器排除 GIF
   .ignoreBy(200) // 忽略小于 200KB 的图片
+  .setQuality(82) // 提高清晰度，建议 75-85
   .setTargetDir('/custom/output/dir') // 自定义输出目录
+  .setMaxConcurrency(3) // 批量压缩最大并发数
   .onStart(() => console.log('开始压缩...'))
   .onSuccess((filePath) => console.log('压缩成功:', filePath))
   .onError((error) => console.error('压缩失败:', error))
@@ -73,6 +78,8 @@ Luban.with(['/path/to/image1.jpg', '/path/to/image2.png'])
 ```
 
 ### 同步获取结果
+
+`.get()` 只返回成功文件路径数组；如果任意一张失败，会抛出错误，不会在数组里包含失败项。
 
 ```typescript
 import { Luban } from '@ark/luban';
@@ -89,6 +96,24 @@ async function compressImages() {
   }
 }
 ```
+
+### 获取完整结果
+
+```typescript
+const results = await Luban.with(['/path/to/image1.jpg', '/path/to/image2.png'])
+  .setMaxConcurrency(3)
+  .getResults();
+
+results.forEach((result) => {
+  if (result.success) {
+    console.log('压缩成功:', result.sourcePath, '=>', result.filePath);
+  } else {
+    console.error('压缩失败:', result.sourcePath, result.error?.message);
+  }
+});
+```
+
+`getResults()` 会返回每张图片的完整结果，失败项也会保留在数组中。若使用了 filter，结果只对应过滤后的输入。
 
 ## 详细 API
 
@@ -117,7 +142,7 @@ const builder = Luban.with([
 const result = await Luban.compress(
   '/path/to/source.jpg',
   '/path/to/target.jpg',
-  { focusAlpha: true }
+  { focusAlpha: true, quality: 82 }
 );
 ```
 
@@ -130,7 +155,9 @@ Luban.with(paths)
   .filter((path) => path.endsWith('.jpg')) // 设置过滤器
   .ignoreBy(100) // 忽略小于 100KB 的文件
   .setFocusAlpha(true) // 保留透明通道
+  .setQuality(82) // 设置 JPEG 质量
   .setTargetDir('/output/dir') // 设置输出目录
+  .setMaxConcurrency(3) // 设置批量压缩最大并发数
   .launch();
 ```
 
@@ -194,6 +221,9 @@ import { LubanUtils } from '@ark/luban';
 ```typescript
 import { LubanUtils } from '@ark/luban';
 
+// 初始化 Context
+LubanUtils.setContext(context);
+
 // 检查是否为图片
 LubanUtils.isImage(path);
 
@@ -205,6 +235,20 @@ const size = LubanUtils.formatFileSize(bytes);
 ```
 
 ## 高级用法
+
+### 调整清晰度
+
+默认 JPEG 质量偏体积优先。如果压缩后感觉发糊，可以提高质量值；建议从 `75-85` 开始，带文字的截图或商品图可适当提高到 `85` 左右。
+
+```typescript
+await Luban.with(paths)
+  .setQuality(82)
+  .get();
+
+const result = await Luban.compress('/path/source.jpg', undefined, {
+  quality: 82
+});
+```
 
 ### 自定义压缩流程
 
@@ -225,7 +269,7 @@ Luban.with(paths)
   .onSuccess(async (filePath) => {
     const originalSize = await LubanUtils.getFileSizeInKB(path);
     const compressedSize = await LubanUtils.getFileSizeInKB(filePath);
-    const ratio = LubanUtils.calculateCompressRatio(originalSize, compressedSize);
+    const ratio = LubanUtils.calculateCompressionRatio(originalSize, compressedSize);
     console.log(`压缩率: ${ratio}%`);
   })
   .launch();
@@ -235,7 +279,7 @@ Luban.with(paths)
 
 ```typescript
 async function compressInBatches(paths: string[]) {
-  const batchSize = 3; // 每批处理3张
+  const batchSize = 30;
   const batches = [];
   
   for (let i = 0; i < paths.length; i += batchSize) {
@@ -243,6 +287,7 @@ async function compressInBatches(paths: string[]) {
     batches.push(
       Luban.with(batch)
         .filter(LubanUtils.FILTERS.DEFAULT())
+        .setMaxConcurrency(3)
         .get()
     );
   }
@@ -294,7 +339,7 @@ Luban.with(paths)
   // 处理压缩后的文件
   await processCompressedFile(filePath);
   // 清理临时文件
-  LubanUtils.cleanupTempFiles();
+  LubanUtils.cleanTempCache();
 })
 ```
 

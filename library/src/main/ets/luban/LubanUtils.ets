@@ -6,12 +6,29 @@
 import { fileIo } from '@kit.CoreFileKit';
 import fs from '@ohos.file.fs';
 import { LogUtil } from './LogUtil';
-import { FilterCollection, CompressionPredicate } from './LubanTypes';
+import { FilterCollection, CompressionPredicate, LubanContext, PreprocessedImageFile } from './LubanTypes';
 
 /**
  * Luban 工具类
  */
 export class LubanUtils {
+  private static appContext: LubanContext | undefined = undefined;
+
+  /**
+   * 注入应用 Context，避免库内部依赖已废弃的全局 getContext。
+   */
+  static setContext(context: LubanContext): void {
+    LubanUtils.appContext = context;
+  }
+
+  static getContext(): LubanContext {
+    if (LubanUtils.appContext !== undefined) {
+      return LubanUtils.appContext;
+    }
+
+    throw new Error('LubanContext 未初始化，请在应用启动时调用 LubanUtils.setContext(this.context)');
+  }
+
   /**
    * 支持的图片格式
    */
@@ -74,7 +91,8 @@ export class LubanUtils {
    * @returns 文件扩展名（小写）
    */
   static getFileExtension(filePath: string): string {
-    const fileName = filePath.split('/').pop() || '';
+    const normalizedPath = LubanUtils.stripQueryAndFragment(filePath);
+    const fileName = normalizedPath.split('/').pop() || '';
     const dotIndex = fileName.lastIndexOf('.');
 
     if (dotIndex === -1 || dotIndex === fileName.length - 1) {
@@ -90,14 +108,71 @@ export class LubanUtils {
    * @returns 文件名
    */
   static getFileNameWithoutExtension(filePath: string): string {
-    const fileName = filePath.split('/').pop() || '';
+    const normalizedPath = LubanUtils.stripQueryAndFragment(filePath);
+    const fileName = filePath.length > 0 ? (normalizedPath.split('/').pop() || '') : '';
     const dotIndex = fileName.lastIndexOf('.');
 
     if (dotIndex === -1) {
-      return fileName;
+      return fileName || 'compressed';
     }
 
-    return fileName.substring(0, dotIndex);
+    return fileName.substring(0, dotIndex) || 'compressed';
+  }
+
+  /**
+   * 移除 URI 查询参数和 fragment，便于解析扩展名和文件名
+   */
+  static stripQueryAndFragment(filePath: string): string {
+    const queryIndex = filePath.indexOf('?');
+    const fragmentIndex = filePath.indexOf('#');
+    let endIndex = filePath.length;
+
+    if (queryIndex !== -1) {
+      endIndex = Math.min(endIndex, queryIndex);
+    }
+    if (fragmentIndex !== -1) {
+      endIndex = Math.min(endIndex, fragmentIndex);
+    }
+
+    return filePath.substring(0, endIndex);
+  }
+
+  /**
+   * 根据 MIME 格式获取推荐文件扩展名
+   */
+  static getExtensionByMime(format: string): string {
+    if (format === 'image/png') {
+      return 'png';
+    }
+    if (format === 'image/webp') {
+      return 'webp';
+    }
+    return 'jpg';
+  }
+
+  /**
+   * 替换文件扩展名
+   */
+  static replaceFileExtension(fileName: string, extension: string): string {
+    const normalizedName = LubanUtils.stripQueryAndFragment(fileName);
+    const dotIndex = normalizedName.lastIndexOf('.');
+
+    if (dotIndex === -1) {
+      return `${normalizedName}.${extension}`;
+    }
+
+    return `${normalizedName.substring(0, dotIndex)}.${extension}`;
+  }
+
+  /**
+   * 生成压缩输出文件名
+   */
+  static generateOutputFileName(originalPath: string, extension: string, prefix: string = 'luban'): string {
+    const nameWithoutExt = LubanUtils.getFileNameWithoutExtension(originalPath);
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000);
+
+    return `${nameWithoutExt}_${prefix}_${timestamp}_${random}.${extension}`;
   }
 
   /**
@@ -235,20 +310,18 @@ export class LubanUtils {
    * @returns 默认输出目录路径（filesDir/luban/）
    */
   static getDefaultOutputDir(): string {
+    const context = LubanUtils.getContext();
+    const outputDir = context.getApplicationContext().filesDir + '/luban';
+
     try {
-      const context = getContext();
-      const outputDir = context.getApplicationContext().filesDir + '/luban';
-      
-      // 确保目录存在
       if (!fileIo.accessSync(outputDir)) {
         fileIo.mkdirSync(outputDir, true);
       }
-      
-      return outputDir;
     } catch (error) {
-      LogUtil.error('获取默认输出目录失败:', error);
-      return '/data/storage/el2/base/files/luban';
+      throw new Error(`无法创建默认输出目录: ${outputDir}`);
     }
+
+    return outputDir;
   }
 
   /**
@@ -258,11 +331,7 @@ export class LubanUtils {
    * @returns 唯一的文件名
    */
   static generateUniqueFileName(originalPath: string, prefix: string = 'luban'): string {
-    const nameWithoutExt = LubanUtils.getFileNameWithoutExtension(originalPath);
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 1000);
-
-    return `${prefix}_${nameWithoutExt}_${timestamp}_${random}.jpg`;
+    return LubanUtils.generateOutputFileName(originalPath, 'jpg', prefix);
   }
 
   /**
@@ -305,6 +374,9 @@ export class LubanUtils {
      */
     MIN_SIZE: (minSizeKB: number): CompressionPredicate => {
       return (path: string): boolean => {
+        if (LubanUtils.isUri(path)) {
+          return true;
+        }
         const sizeKB = LubanUtils.getFileSizeInKBSync(path);
         return sizeKB > minSizeKB;
       };
@@ -331,7 +403,7 @@ export class LubanUtils {
    */
   static getTempDirPath(dirPath: string = "", fileName: string = "", blHap: boolean = true): string {
     try {
-      const context = getContext();
+      const context = LubanUtils.getContext();
       let filePath = blHap ? context.tempDir : context.getApplicationContext().tempDir; // 根目录
 
       if (dirPath && dirPath.trim() !== "") {
@@ -368,7 +440,7 @@ export class LubanUtils {
    */
   static getCacheDirPath(dirPath: string = "", fileName: string = "", blHap: boolean = true): string {
     try {
-      const context = getContext();
+      const context = LubanUtils.getContext();
       let filePath = blHap ? context.cacheDir : context.getApplicationContext().cacheDir; // 根目录
 
       if (dirPath && dirPath.trim() !== "") {
@@ -474,7 +546,7 @@ export class LubanUtils {
    * @returns 生成的临时文件名
    */
   private static generateTempFileName(originalPath: string): string {
-    const extension = LubanUtils.getFileExtension(originalPath);
+    const extension = LubanUtils.getFileExtension(originalPath) || 'tmp';
     const nameWithoutExt = LubanUtils.getFileNameWithoutExtension(originalPath);
     const timestamp = Date.now();
     const random = Math.floor(Math.random() * 1000);
@@ -489,20 +561,34 @@ export class LubanUtils {
    * @returns 处理后的可访问文件路径
    */
   static async preprocessImageFile(filePath: string): Promise<string> {
+    const result = await LubanUtils.preprocessImageFileWithCleanup(filePath);
+    return result.path;
+  }
+
+  /**
+   * 预处理图片文件路径，并返回是否需要清理临时副本。
+   */
+  static async preprocessImageFileWithCleanup(filePath: string): Promise<PreprocessedImageFile> {
     try {
       LogUtil.debug(`🔧 预处理图片文件: ${filePath}`);
 
       // 如果不是 URI，直接返回
       if (!LubanUtils.isUri(filePath)) {
         LogUtil.debug('📁 普通路径，直接返回');
-        return filePath;
+        return {
+          path: filePath,
+          shouldClean: false
+        };
       }
 
       // 对于 URI，直接复制到临时目录
       LogUtil.debug('🔗 检测到 URI，复制到临时目录...');
       const tempFilePath = await LubanUtils.copyToTemp(filePath);
       LogUtil.debug(`✅ 已复制到临时目录: ${tempFilePath}`);
-      return tempFilePath;
+      return {
+        path: tempFilePath,
+        shouldClean: true
+      };
     } catch (error) {
       LogUtil.error('❌ 预处理图片文件失败:', error);
       throw new Error(`预处理图片文件失败: ${error}`);

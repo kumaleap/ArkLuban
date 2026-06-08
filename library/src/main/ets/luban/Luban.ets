@@ -11,6 +11,7 @@ import {
   CompressConfig,
   CompressResult,
   CompressOptions,
+  CompressSettledResult,
   RenameCallback
 } from './LubanTypes';
 import { LogUtil } from './LogUtil';
@@ -26,7 +27,8 @@ export class LubanBuilder {
       paths: Array.isArray(paths) ? paths : [paths],
       ignoreBy: 100, // 默认 100KB
       focusAlpha: false, // 默认不保留透明通道
-      targetDir: '' // 默认为空，使用系统缓存目录
+      targetDir: '', // 默认为空，使用系统缓存目录
+      maxConcurrency: 3
     };
   }
 
@@ -61,12 +63,32 @@ export class LubanBuilder {
   }
 
   /**
+   * 设置 JPEG 压缩质量，建议 5-95。值越高越清晰，文件也越大。
+   * @param quality JPEG 质量
+   * @returns 构建器实例
+   */
+  setQuality(quality: number): LubanBuilder {
+    this.config.quality = quality;
+    return this;
+  }
+
+  /**
    * 设置目标目录
    * @param targetDir 目标目录路径
    * @returns 构建器实例
    */
   setTargetDir(targetDir: string): LubanBuilder {
     this.config.targetDir = targetDir;
+    return this;
+  }
+
+  /**
+   * 设置批量压缩最大并发数
+   * @param count 并发数量，最小为 1
+   * @returns 构建器实例
+   */
+  setMaxConcurrency(count: number): LubanBuilder {
+    this.config.maxConcurrency = Math.max(1, Math.floor(count));
     return this;
   }
 
@@ -168,19 +190,14 @@ export class LubanBuilder {
         return;
       }
 
-      // 并行压缩多个文件
-      const compressTasks = filteredPaths.map(async (path) => {
-        return await this.compressSingleFile(path, targetDir);
-      });
-
-      const results = await Promise.allSettled(compressTasks);
+      const results = await this.compressWithConcurrency(filteredPaths, targetDir);
 
       // 处理结果
       for (const result of results) {
-        if (result.status === "fulfilled" && result.value.success && result.value.filePath) {
+        if (result.status === "fulfilled" && result.value?.success && result.value.filePath) {
           this.config.onSuccess?.(result.value.filePath);
         } else if (result.status === "rejected") {
-          this.config.onError?.(result.reason);
+          this.config.onError?.(result.reason || new Error('压缩失败'));
         } else if (result.status === "fulfilled" && result.value?.error) {
           this.config.onError?.(result.value.error);
         }
@@ -202,18 +219,46 @@ export class LubanBuilder {
     await this.ensureDirectoryExists(targetDir);
 
     const filteredPaths = this.filterPaths();
+    const settledResults = await this.compressWithConcurrency(filteredPaths, targetDir);
     const results: string[] = [];
 
-    for (const path of filteredPaths) {
-      const result = await this.compressSingleFile(path, targetDir);
-      if (result.success && result.filePath) {
-        results.push(result.filePath);
-      } else if (result.error) {
-        throw result.error;
+    for (const settledResult of settledResults) {
+      if (settledResult.status === 'rejected') {
+        throw settledResult.reason || new Error('压缩失败');
+      }
+
+      const value = settledResult.value;
+      if (value?.success && value.filePath) {
+        results.push(value.filePath);
+      } else if (value?.error) {
+        throw value.error;
       }
     }
 
     return results;
+  }
+
+  /**
+   * 获取完整压缩结果，保留每个文件的成功或失败状态。
+   */
+  async getResults(): Promise<CompressResult[]> {
+    const targetDir = this.getTargetDirectory();
+    await this.ensureDirectoryExists(targetDir);
+
+    const filteredPaths = this.filterPaths();
+    const settledResults = await this.compressWithConcurrency(filteredPaths, targetDir);
+
+    return settledResults.map((settledResult: CompressSettledResult, index: number): CompressResult => {
+      if (settledResult.status === 'fulfilled' && settledResult.value !== undefined) {
+        return settledResult.value;
+      }
+
+      return {
+        success: false,
+        sourcePath: filteredPaths[index],
+        error: settledResult.reason || new Error('压缩失败')
+      };
+    });
   }
 
   /**
@@ -223,9 +268,14 @@ export class LubanBuilder {
    * @returns 压缩结果
    */
   private async compressSingleFile(sourcePath: string, targetDir: string): Promise<CompressResult> {
+    let processedSourcePath = sourcePath;
+    let shouldCleanTemp = false;
+
     try {
       // 预处理图片文件（处理 URI 权限问题）
-      const processedSourcePath = await LubanUtils.preprocessImageFile(sourcePath);
+      const preprocessed = await LubanUtils.preprocessImageFileWithCleanup(sourcePath);
+      processedSourcePath = preprocessed.path;
+      shouldCleanTemp = preprocessed.shouldClean;
       LogUtil.debug(`🔧 压缩单文件 - 预处理: ${sourcePath} -> ${processedSourcePath}`);
       
       // 检查文件是否存在
@@ -236,12 +286,13 @@ export class LubanBuilder {
       const fileSize = fileIo.statSync(processedSourcePath).size;
       if (fileSize < (this.config.ignoreBy || 100) * 1024) {
         // 文件太小，不需要压缩，直接复制
-        const fileName = this.generateFileName(sourcePath);
+        const fileName = this.generateCopyFileName(sourcePath);
         const targetPath = `${targetDir}/${fileName}`;
         fileIo.copyFileSync(processedSourcePath, targetPath);
 
         const result: CompressResult = {
           success: true,
+          sourcePath: sourcePath,
           filePath: targetPath,
           originalSize: fileSize,
           compressedSize: fileSize
@@ -250,23 +301,67 @@ export class LubanBuilder {
       }
 
       // 生成目标文件路径
-      const fileName = this.generateFileName(sourcePath);
+      const fileName = this.generateCompressedFileName(sourcePath);
       const targetPath = `${targetDir}/${fileName}`;
 
       // 调用压缩引擎（传入预处理后的路径）
-      return await LubanEngine.compressSingle(
+      const result = await LubanEngine.compressSingle(
         processedSourcePath,
         targetPath,
-        this.config.focusAlpha || false
+        this.config.focusAlpha || false,
+        this.config.ignoreBy || 100,
+        this.config.quality
       );
+      result.sourcePath = sourcePath;
+      return result;
 
     } catch (error) {
       const result: CompressResult = {
         success: false,
+        sourcePath: sourcePath,
         error: error as Error
       };
       return result;
+    } finally {
+      if (shouldCleanTemp) {
+        LubanUtils.deleteFile(processedSourcePath);
+      }
     }
+  }
+
+  private async compressWithConcurrency(paths: string[], targetDir: string): Promise<CompressSettledResult[]> {
+    const maxConcurrency = Math.max(1, this.config.maxConcurrency || 3);
+    const results: CompressSettledResult[] = new Array(paths.length);
+    let nextIndex = 0;
+
+    const worker = async (): Promise<void> => {
+      while (nextIndex < paths.length) {
+        const currentIndex = nextIndex;
+        nextIndex++;
+
+        try {
+          const value = await this.compressSingleFile(paths[currentIndex], targetDir);
+          results[currentIndex] = {
+            status: 'fulfilled',
+            value: value
+          };
+        } catch (error) {
+          results[currentIndex] = {
+            status: 'rejected',
+            reason: error
+          };
+        }
+      }
+    };
+
+    const workerCount = Math.min(maxConcurrency, paths.length);
+    const workers: Promise<void>[] = [];
+    for (let index = 0; index < workerCount; index++) {
+      workers.push(worker());
+    }
+
+    await Promise.all(workers);
+    return results;
   }
 
   /**
@@ -286,16 +381,22 @@ export class LubanBuilder {
    * @param sourcePath 源文件路径
    * @returns 生成的文件名
    */
-  private generateFileName(sourcePath: string): string {
+  private generateCompressedFileName(sourcePath: string): string {
     if (this.config.onRename) {
       return this.config.onRename(sourcePath);
     }
 
-    const fileName = sourcePath.split('/').pop() || 'compressed';
-    const nameWithoutExt = fileName.split('.')[0];
-    const timestamp = Date.now();
+    const extension = LubanEngine.getOutputExtension(sourcePath, this.config.focusAlpha || false);
+    return LubanUtils.generateOutputFileName(sourcePath, extension);
+  }
 
-    return `${nameWithoutExt}_luban_${timestamp}.jpg`;
+  private generateCopyFileName(sourcePath: string): string {
+    if (this.config.onRename) {
+      return this.config.onRename(sourcePath);
+    }
+
+    const extension = LubanUtils.getFileExtension(sourcePath) || 'jpg';
+    return LubanUtils.generateOutputFileName(sourcePath, extension);
   }
 
   /**
@@ -352,14 +453,18 @@ export class Luban {
     targetPath?: string,
     options?: CompressOptions
   ): Promise<CompressResult> {
-    const targetDir = targetPath ?
-    targetPath.substring(0, targetPath.lastIndexOf('/')) : getContext().cacheDir + '/luban';
+    let processedSourcePath = sourcePath;
+    let shouldCleanTemp = false;
 
-    const fileName = targetPath ?
-    targetPath.substring(targetPath.lastIndexOf('/') + 1) :
-    LubanEngine.generateCompressedFileName(sourcePath, targetDir);
-
-    const finalTargetPath = targetPath || `${targetDir}/${fileName}`;
+    const slashIndex = targetPath ? targetPath.lastIndexOf('/') : -1;
+    const targetDir = targetPath && slashIndex > 0 ?
+    targetPath.substring(0, slashIndex) : LubanUtils.getCacheDirPath('luban');
+    let finalTargetPath = LubanEngine.generateCompressedFileName(sourcePath, targetDir);
+    if (targetPath && slashIndex > 0) {
+      finalTargetPath = targetPath;
+    } else if (targetPath && slashIndex === -1) {
+      finalTargetPath = `${targetDir}/${targetPath}`;
+    }
 
     // 确保目录存在
     try {
@@ -369,15 +474,30 @@ export class Luban {
     } catch (error) {
       const result: CompressResult = {
         success: false,
+        sourcePath: sourcePath,
         error: new Error(`无法创建目标目录: ${targetDir}`)
       };
       return result;
     }
 
-    return await LubanEngine.compressSingle(
-      sourcePath,
-      finalTargetPath,
-      options?.focusAlpha || false
-    );
+    try {
+      const preprocessed = await LubanUtils.preprocessImageFileWithCleanup(sourcePath);
+      processedSourcePath = preprocessed.path;
+      shouldCleanTemp = preprocessed.shouldClean;
+
+      const result = await LubanEngine.compressSingle(
+        processedSourcePath,
+        finalTargetPath,
+        options?.focusAlpha || false,
+        options?.ignoreBy || 100,
+        options?.quality
+      );
+      result.sourcePath = sourcePath;
+      return result;
+    } finally {
+      if (shouldCleanTemp) {
+        LubanUtils.deleteFile(processedSourcePath);
+      }
+    }
   }
 } 
